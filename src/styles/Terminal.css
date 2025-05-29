@@ -1,0 +1,110 @@
+.terminal-container {
+  flex: 1;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--accent-tertiary);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 300px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.terminal-header {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--accent-tertiary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.terminal-header svg {
+  color: var(--accent-primary);
+}
+
+.terminal-loader {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--accent-primary);
+  border-radius: 50%;
+  border-top-color: transparent;
+  margin-left: auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.terminal-output {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.terminal-line {
+  position: relative;
+  padding-left: 0.25rem;
+}
+
+.terminal-line.processing {
+  color: var(--accent-primary);
+}
+
+.terminal-line.error {
+  color: var(--error);
+}
+
+.terminal-placeholder {
+  color: var(--text-secondary);
+  font-style: italic;
+  opacity: 0.7;
+  margin: auto;
+  text-align: center;
+}
+
+/* Animation for new terminal lines */
+.terminal-line {
+  animation: slide-in 0.2s ease-out;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom scrollbar */
+.terminal-output::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-output::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.terminal-output::-webkit-scrollbar-thumb {
+  background: var(--accent-tertiary);
+  border-radius: 3px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-secondary);
+}
