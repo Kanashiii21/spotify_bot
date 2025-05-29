@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow;
-let currentBot = null;
+let botProcesses = [];
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -26,7 +26,7 @@ function createWindow() {
     autoHideMenuBar: process.platform !== 'darwin',
   });
 
-     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   mainWindow.loadURL('http://localhost:5173');
 
   mainWindow.once('ready-to-show', () => {
@@ -39,51 +39,73 @@ function createWindow() {
 }      
 
 ipcMain.on('start-bot', (event, data) => {
-  if (!data.bin || !data.mes || !data.ano || !data.cvv) {
+  if (!data.bin || !data.mes || !data.ano || !data.cvv || !data.threads) {
     event.sender.send('bot-stderr', 'Missing required input fields');
     return;
   }
   
+  const numThreads = parseInt(data.threads);
+  if (isNaN(numThreads) || numThreads < 1 || numThreads > 10) {
+    event.sender.send('bot-stderr', 'Invalid number of threads (must be 1-10)');
+    return;
+  }
+
+  // Kill any existing bot processes
+  stopAllBots();
+  
   const botScript = path.join(__dirname, '..\\source_bot\\main.mjs');
 //    const botScript = path.join(__dirname, 'bot.js');
   
-  // Configure child process with silent: true to capture stdout/stderr
-  currentBot = fork(botScript, [data.bin, data.mes, data.ano, data.cvv], {
-    silent: true
-  });
+  // Start the requested number of bot processes
+  for (let i = 0; i < numThreads; i++) {
+    const botProcess = fork(botScript, [data.bin, data.mes, data.ano, data.cvv], {
+      silent: true
+    });
 
-  // Handle IPC messages from the child process
-  currentBot.on('message', (msg) => {
-    if (mainWindow && msg) {
-      mainWindow.webContents.send('bot-stdout', msg);
-    }
-  });
+    botProcess.on('message', (msg) => {
+      if (mainWindow && msg) {
+        mainWindow.webContents.send('bot-stdout', `[Thread ${i + 1}] ${msg}`);
+      }
+    });
 
-  currentBot.on('close', (code) => {
-    if (mainWindow) {
-      event.sender.send('bot-stdout', `Bot process exited with code ${code}`);
-    }
-    currentBot = null;
-  });
-  
-  currentBot.on('error', (err) => {
-    if (mainWindow) {
-      event.sender.send('bot-stderr', `Failed to start bot process: ${err.message}`);
-    }
-    currentBot = null;
-  });
+    botProcess.on('close', (code) => {
+      if (mainWindow) {
+        event.sender.send('bot-stdout', `[Thread ${i + 1}] Bot process exited with code ${code}`);
+      }
+      // Remove process from array when it exits
+      botProcesses = botProcesses.filter(p => p !== botProcess);
+    });
+    
+    botProcess.on('error', (err) => {
+      if (mainWindow) {
+        event.sender.send('bot-stderr', `[Thread ${i + 1}] Failed to start bot process: ${err.message}`);
+      }
+      botProcesses = botProcesses.filter(p => p !== botProcess);
+    });
+
+    botProcesses.push(botProcess);
+  }
 });
 
-ipcMain.on('stop-bot', () => {
-  if (currentBot) {
-    currentBot.kill();
-    currentBot = null;
+function stopAllBots() {
+  for (const process of botProcesses) {
+    try {
+      process.kill();
+    } catch (err) {
+      console.error('Error killing bot process:', err);
+    }
   }
+  botProcesses = [];
+}
+
+ipcMain.on('stop-bot', () => {
+  stopAllBots();
 });
 
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
+  stopAllBots();
   if (process.platform !== 'darwin') {
     app.quit();
   }
