@@ -45,7 +45,6 @@ function App() {
           seenMessages.add(msg);
           setConsoleOutput(prev => [...prev, msg]);
           
-          // Handle multiple accounts in a single message
           if (msg.toLowerCase().includes('premium')) {
             const timestamp = msg.split(' ')[0];
             const accountPart = msg.split(' ').find(part => part.includes(':'));

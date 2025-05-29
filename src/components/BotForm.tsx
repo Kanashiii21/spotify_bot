@@ -20,6 +20,7 @@ export interface BotFormData {
   mes: string;
   ano: string;
   cvv: string;
+  threads: string;
 }
 
 export const BotForm: React.FC<BotFormProps> = ({ onSubmit, onStop, savedData, isProcessing, stats }) => {
@@ -27,7 +28,8 @@ export const BotForm: React.FC<BotFormProps> = ({ onSubmit, onStop, savedData, i
     bin: '',
     mes: '',
     ano: '',
-    cvv: ''
+    cvv: '',
+    threads: '1'
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -56,6 +58,11 @@ export const BotForm: React.FC<BotFormProps> = ({ onSubmit, onStop, savedData, i
       validatedValue = value.replace(/[^\d]/g, '').substring(0, 4);
     } else if (id === 'cvv') {
       validatedValue = value.replace(/[^\d]/g, '').substring(0, 4);
+    } else if (id === 'threads') {
+      validatedValue = value.replace(/[^\d]/g, '');
+      const numValue = parseInt(validatedValue);
+      if (numValue > 10) validatedValue = '10';
+      if (numValue < 1) validatedValue = '1';
     }
     
     setFormData(prev => ({
@@ -114,6 +121,14 @@ export const BotForm: React.FC<BotFormProps> = ({ onSubmit, onStop, savedData, i
           delete newErrors.cvv;
         }
         break;
+      case 'threads':
+        const threads = parseInt(value);
+        if (threads < 1 || threads > 10) {
+          newErrors.threads = 'Threads must be between 1-10';
+        } else {
+          delete newErrors.threads;
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -144,6 +159,11 @@ export const BotForm: React.FC<BotFormProps> = ({ onSubmit, onStop, savedData, i
     if (formData.cvv && formData.cvv.length < 3) {
       newErrors.cvv = 'CVV must be at least 3 digits';
     }
+
+    const threads = parseInt(formData.threads);
+    if (isNaN(threads) || threads < 1 || threads > 10) {
+      newErrors.threads = 'Threads must be between 1-10';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -152,12 +172,12 @@ export const BotForm: React.FC<BotFormProps> = ({ onSubmit, onStop, savedData, i
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Mark all fields as touched
     setTouched({
       bin: true,
       mes: true,
       ano: true,
-      cvv: true
+      cvv: true,
+      threads: true
     });
     
     if (validateForm()) {
@@ -238,18 +258,37 @@ export const BotForm: React.FC<BotFormProps> = ({ onSubmit, onStop, savedData, i
           />
         </div>
         
-        <div className={`field ${errors.cvv && touched.cvv ? 'error' : ''}`}>
-          <label htmlFor="cvv">
-            CVV
-            {errors.cvv && touched.cvv && <span className="error-message">{errors.cvv}</span>}
-          </label>
-          <input 
-            id="cvv" 
-            value={maskContent(formData.cvv)}
-            onChange={handleChange}
-            placeholder="123" 
-            disabled={isProcessing}
-          />
+        <div className="input-row">
+          <div className={`field ${errors.cvv && touched.cvv ? 'error' : ''}`}>
+            <label htmlFor="cvv">
+              CVV
+              {errors.cvv && touched.cvv && <span className="error-message">{errors.cvv}</span>}
+            </label>
+            <input 
+              id="cvv" 
+              value={maskContent(formData.cvv)}
+              onChange={handleChange}
+              placeholder="123" 
+              disabled={isProcessing}
+            />
+          </div>
+
+          <div className={`field ${errors.threads && touched.threads ? 'error' : ''}`}>
+            <label htmlFor="threads">
+              THREADS
+              {errors.threads && touched.threads && <span className="error-message">{errors.threads}</span>}
+            </label>
+            <input 
+              id="threads" 
+              type="number"
+              min="1"
+              max="10"
+              value={formData.threads}
+              onChange={handleChange}
+              placeholder="1-10" 
+              disabled={isProcessing}
+            />
+          </div>
         </div>
         
         <div className="button-group">

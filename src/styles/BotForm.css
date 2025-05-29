@@ -66,6 +66,13 @@
   position: relative;
 }
 
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
 .field label {
   font-size: 0.75rem;
   font-weight: 500;
