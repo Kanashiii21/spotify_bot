@@ -12,6 +12,7 @@ interface Account {
   email: string;
   password: string;
   timestamp: string;
+  threadId: number;
 }
 
 declare global {
@@ -37,6 +38,7 @@ function App() {
   const [stats, setStats] = useState({ premium: 0, declined: 0, threeDSecure: 0 });
   const [sessionKey, setSessionKey] = useLocalStorage('sessionKey', '');
   const [seenMessages] = useState(new Set<string>());
+  const [threadAccounts] = useState(new Map<number, boolean>());
 
   useEffect(() => {
     if (window.electronAPI) {
@@ -46,21 +48,29 @@ function App() {
           setConsoleOutput(prev => [...prev, msg]);
           
           if (msg.toLowerCase().includes('premium')) {
-            const timestamp = msg.split(' ')[0];
-            const accountPart = msg.split(' ').find(part => part.includes(':'));
+            // Extract thread ID from the message format "[Thread X] message"
+            const threadMatch = msg.match(/\[Thread (\d+)\]/);
+            const threadId = threadMatch ? parseInt(threadMatch[1]) : 1;
             
-            if (accountPart) {
-              const [email, password] = accountPart.split(':');
+            // Only process if we haven't gotten an account from this thread yet
+            if (!threadAccounts.get(threadId)) {
+              const timestamp = msg.split(' ')[1]; // Skip the [Thread X] part
+              const accountPart = msg.split(' ').find(part => part.includes(':'));
               
-              setPremiumAccounts(prev => {
-                const accountExists = prev.some(acc => acc.email === email && acc.password === password);
-                if (!accountExists) {
-                  return [...prev, { email, password, timestamp }];
-                }
-                return prev;
-              });
-              
-              setStats(prev => ({ ...prev, premium: prev.premium + 1 }));
+              if (accountPart) {
+                const [email, password] = accountPart.split(':');
+                
+                setPremiumAccounts(prev => {
+                  const accountExists = prev.some(acc => acc.email === email && acc.password === password);
+                  if (!accountExists) {
+                    threadAccounts.set(threadId, true); // Mark this thread as having found an account
+                    return [...prev, { email, password, timestamp, threadId }];
+                  }
+                  return prev;
+                });
+                
+                setStats(prev => ({ ...prev, premium: prev.premium + 1 }));
+              }
             }
           } else if (msg.toLowerCase().includes('declined')) {
             setStats(prev => ({ ...prev, declined: prev.declined + 1 }));
@@ -90,6 +100,7 @@ function App() {
     
     setConsoleOutput([]);
     seenMessages.clear();
+    threadAccounts.clear(); // Reset thread tracking
     setIsProcessing(true);
     setStats({ premium: 0, declined: 0, threeDSecure: 0 });
     
