@@ -45,23 +45,24 @@ function App() {
           seenMessages.add(msg);
           setConsoleOutput(prev => [...prev, msg]);
           
+          // Handle multiple accounts in a single message
           if (msg.toLowerCase().includes('premium')) {
-          const parts = msg.split(':');
-          const email    = parts[2].split(' ')[2];
-          const password = parts[3];
-
-          setPremiumAccounts(prev => [
-          ...prev,
-          {
-               email,
-               password,
-               timestamp: new Date().toLocaleString()
-          }
-          ]);
-          }
-          
-          if (msg.toLowerCase().includes('premium')) {
-            setStats(prev => ({ ...prev, premium: prev.premium + 1 }));
+            const timestamp = msg.split(' ')[0];
+            const accountPart = msg.split(' ').find(part => part.includes(':'));
+            
+            if (accountPart) {
+              const [email, password] = accountPart.split(':');
+              
+              setPremiumAccounts(prev => {
+                const accountExists = prev.some(acc => acc.email === email && acc.password === password);
+                if (!accountExists) {
+                  return [...prev, { email, password, timestamp }];
+                }
+                return prev;
+              });
+              
+              setStats(prev => ({ ...prev, premium: prev.premium + 1 }));
+            }
           } else if (msg.toLowerCase().includes('declined')) {
             setStats(prev => ({ ...prev, declined: prev.declined + 1 }));
           } else if (msg.toLowerCase().includes('counter')) {
@@ -179,4 +180,4 @@ function App() {
   return appContent;
 }
 
-export default App
+export default App;
